@@ -5,22 +5,24 @@
 #include "lazyforeignkey.h"
 
 void LFK_LookUp(LFK_Table const *table, LFK_ForeignKey *key) {
-	int llup = key->llup == LLUP_FIRST_TIME ? table->len - 1 : key->llup;
+	if (key->id == -1L) return;
+	
+	int llup = key->llup == -1 ? table->len - 1 : key->llup;
 	int i;
 	for (i = llup; i >= 0; i--) {
 		long table_id = table->ids[i];
-		if (table_id == -1) {
+		if (table_id == -1L) {
 			continue;
 		} else if (table_id == key->id) {
 			key->llup = i;
 			return;
 		} else if (table_id < key->id) {
-			key->llup = LLUP_DELETED;
+			key->id = -1L;
 			return;
 		}
 	}
 	
-	key->llup = LLUP_DELETED;
+	key->id = -1;
 	return;
 }
 
@@ -38,11 +40,11 @@ int LFK_NewColumn(LFK_Table *table, int item_size) {
 }
 
 int LFK_NewForeignKey(LFK_Table *table) {
-	int id = table->foreignkey_columns;
-	table->foreignkey_columns++;
+	int id = table->foreignkey_len;
+	table->foreignkey_len++;
 	table->foreignkey_values = realloc
 	(table->foreignkey_values,
-	 sizeof(*table->foreignkey_values) * table->foreignkey_columns);
+	 sizeof(*table->foreignkey_values) * table->foreignkey_len);
 	table->foreignkey_values[id] = malloc(sizeof(double) * table->cap);
 	memset(table->foreignkey_values[id], 0, sizeof(double) * table->cap);
 	return id;
@@ -76,7 +78,7 @@ void LFK_Defragment(LFK_Table *table) {
 					   ((unsigned char*)ptr) + i * size,
 					   size);
 			}
-			for (j = 0; j < table->foreignkey_columns; j++) {
+			for (j = 0; j < table->foreignkey_len; j++) {
 				table->foreignkey_values[j][i - move] = table->foreignkey_values[j][i];
 			}
 			
@@ -92,7 +94,7 @@ void LFK_FreeTable(LFK_Table *table) {
 	for (i = 0; i < table->column_len; i++) {
 		free(table->data[i]);
 	}
-	for (i = 0; i < table->foreignkey_columns; i++) {
+	for (i = 0; i < table->foreignkey_len; i++) {
 		free(table->foreignkey_values[i]);
 	}
 	

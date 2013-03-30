@@ -29,7 +29,7 @@ void DeleteRow(LFK_Table *table, int pos) {
 }
 
 LFK_ForeignKey LFK_CreateForeignKey(long id) {
-	return (LFK_ForeignKey){.id = id, .llup = LLUP_FIRST_TIME};
+	return (LFK_ForeignKey){.id = id, .llup = -1};
 }
 
 void TestDefragmentation(void) {
@@ -37,7 +37,7 @@ void TestDefragmentation(void) {
 	LFK_NewColumn(people, sizeof(int));
 	
 	int i;
-	int cl = 1 << 26;
+	int cl = 1 << 0;
 	for (i = 0; i < cl; i++) {
 	
 		long carl = InsertRow(people, 3);
@@ -47,7 +47,7 @@ void TestDefragmentation(void) {
 		assert(carl_key.llup == 0);
 		DeleteRow(people, 0);
 		LFK_LookUp(people, &carl_key);
-		assert(carl_key.llup == LLUP_DELETED);
+		assert(carl_key.id == -1L);
 		
 		long john = InsertRow(people, 5);
 		long sara = InsertRow(people, 7);

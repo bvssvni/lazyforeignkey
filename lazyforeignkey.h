@@ -44,26 +44,22 @@
  id		= identifier
  
  */
-enum llup_constants {
-	LLUP_DELETED = -1,
-	LLUP_FIRST_TIME = -2,
-};
 
 typedef struct LFK_ForeignKey {
-	long id;
-	int llup;
+	long id;	// -1 when deleted.
+	int llup;	// -1 before looking up first time.
 } LFK_ForeignKey;
 
 typedef struct LFK_Table {
-	int len;
-	int cap;
-	long id_counter;
-	long *ids;
-	int column_len;
-	int *column_size;
-	void **data;
-	int foreignkey_columns;
-	LFK_ForeignKey **foreignkey_values;
+	int len;	// number of rows in table.
+	int cap;	// row capacity.
+	long id_counter;	// the next id.
+	long *ids;			// the ids per row.
+	int column_len;		// number of columns.
+	int *column_size;	// size of each column in bytes.
+	void **data;		// a pointer for each allocated column.
+	int foreignkey_len;					// number of foreign keys.
+	LFK_ForeignKey **foreignkey_values;	// foreign key data.
 } LFK_Table;
 
 void LFK_LookUp(LFK_Table const *table, LFK_ForeignKey *key);
