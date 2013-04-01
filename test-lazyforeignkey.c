@@ -1,9 +1,9 @@
 #if 0
 #!/bin/bash
 clear
-gcc -o test-lazyforeignkey test-lazyforeignkey.c lazyforeignkey.c -O3 -Wall -Wfatal-errors
+gcc -o bin/test-lazyforeignkey test-lazyforeignkey.c lazyforeignkey.c -O3 -Wall -Wfatal-errors
 if [ "$?" = "0" ]; then
-	time ./test-lazyforeignkey
+	time ./bin/test-lazyforeignkey
 fi
 exit
 #endif
@@ -105,7 +105,7 @@ void TestReadWrite(void) {
 	InsertVector(t, 10, 20);
 	InsertVector(t, 11, 21);
 	
-	const char* file = "test.bin";
+	const char* file = "testfiles/test.bin";
 	FILE *f = fopen(file, "w");
 	LFK_Write(t.table, f);
 	fclose(f);
@@ -214,12 +214,13 @@ void TestCustomReadWrite(void) {
 	assert(strcmp(j, "John") == 0);
 	assert(strcmp(p, "Peter") == 0);
 	// Save data.
-	FILE *f = fopen("test-strings.bin", "w");
+	const char* file = "testfiles/test-strings.bin";
+	FILE *f = fopen(file, "w");
 	WriteStrings(strings, f);
 	fclose(f);
 	// Release memory.
 	LFK_FreeTable(strings.table);
-	f = fopen("test-strings.bin", "r");
+	f = fopen(file, "r");
 	strings = ReadStrings(f);
 	fclose(f);
 	c = GetString(strings, carl);
