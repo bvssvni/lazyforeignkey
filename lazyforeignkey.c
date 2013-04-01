@@ -38,13 +38,13 @@ void LFK_LookUp(const LFK_Table *table, LFK_ForeignKey *key) {
 int LFK_AddColumn(LFK_Table *table, int item_size) {
 	int id = table->column_len;
 	table->column_len++;
-	table->column_size = realloc(table->column_size,
-								 sizeof(*table->column_size) * table->column_len);
-	table->data = realloc(table->data,
-							 sizeof(*table->data) * table->column_len);
-	table->data[id] = malloc(item_size * table->len);
+	table->column_size = realloc
+	(table->column_size, sizeof(*table->column_size) * table->column_len);
+	table->data = realloc
+	(table->data, sizeof(*table->data) * table->column_len);
+	table->data[id] = malloc(item_size * table->cap);
 	table->column_size[id] = item_size;
-	memset(table->data[id], 0, item_size * table->len);
+	memset(table->data[id], 0, item_size * table->cap);
 	return id;
 }
 
@@ -88,7 +88,8 @@ void LFK_Defragment(LFK_Table *table) {
 					   size);
 			}
 			for (j = 0; j < table->foreignkey_len; j++) {
-				table->foreignkey_values[j][i - move] = table->foreignkey_values[j][i];
+				LFK_ForeignKey *foreignkeyColumn = table->foreignkey_values[j];
+				foreignkeyColumn[i - move] = foreignkeyColumn[i];
 			}
 			
 			table->ids[i] = -1;
@@ -104,7 +105,8 @@ void LFK_Write(const LFK_Table *table, FILE *f) {
 	fwrite(&table->id_counter, sizeof(table->id_counter), 1, f);
 	fwrite(table->ids, sizeof(*table->ids), table->len, f);
 	fwrite(&table->column_len, sizeof(table->column_len), 1, f);
-	fwrite(table->column_size, sizeof(*table->column_size), table->column_len, f);
+	fwrite(table->column_size,
+		   sizeof(*table->column_size), table->column_len, f);
 	int i;
 	for (i = 0; i < table->column_len; i++) {
 		fwrite(table->data[i], table->column_size[i], table->len, f);
@@ -112,7 +114,8 @@ void LFK_Write(const LFK_Table *table, FILE *f) {
 	
 	fwrite(&table->foreignkey_len, sizeof(table->foreignkey_len), 1, f);
 	for (i = 0; i < table->foreignkey_len; i++) {
-		fwrite(table->foreignkey_values[i], sizeof(LFK_ForeignKey), table->len, f);
+		fwrite(table->foreignkey_values[i],
+			   sizeof(LFK_ForeignKey), table->len, f);
 	}
 }
 
@@ -131,7 +134,8 @@ LFK_Table *LFK_Read(FILE *f) {
 		(sizeof(*table->column_size) * table->column_len);
 	}
 		
-	fread(table->column_size, sizeof(*table->column_size), table->column_len, f);
+	fread(table->column_size,
+		  sizeof(*table->column_size), table->column_len, f);
 	// Allocate array that contains data.
 	if (table->cap > 0) {
 		table->data = malloc(sizeof(*table->data) * table->cap);
@@ -155,7 +159,8 @@ LFK_Table *LFK_Read(FILE *f) {
 	}
 		
 	for (i = 0; i < table->foreignkey_len; i++) {
-		fread(table->foreignkey_values[i], sizeof(LFK_ForeignKey), table->len, f);
+		fread(table->foreignkey_values[i],
+			  sizeof(LFK_ForeignKey), table->len, f);
 	}
 	
 	return table;
@@ -168,7 +173,9 @@ void LFK_FreeTable(LFK_Table *const table) {
 	}
 
 	for (i = 0; i < table->foreignkey_len; i++) {
-		if (table->foreignkey_values[i] != NULL) free(table->foreignkey_values[i]);
+		if (table->foreignkey_values[i] != NULL) {
+			free(table->foreignkey_values[i]);
+		}
 	}
 
 	if (table->column_size != NULL) free(table->column_size);

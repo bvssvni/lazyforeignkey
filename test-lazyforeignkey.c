@@ -126,14 +126,118 @@ void TestReadWrite(void) {
 	LFK_FreeTable(t2.table);
 }
 
+typedef struct {
+	LFK_Table *table;
+} Strings;
+
+typedef struct {
+	LFK_ForeignKey key;
+} String;
+
+Strings NewStringsTable(int capacity) {
+	LFK_Table *table = LFK_NewTable(capacity);
+	LFK_AddColumn(table, sizeof(char*));
+	return (Strings){table};
+}
+
+const char *GetString(Strings strings, String string) {
+	LFK_LookUp(strings.table, &string.key);
+	const char *text = ((char**)strings.table->data[0])[string.key.llup];
+	return text;
+}
+
+char *CopyString(int n, char *text) {
+	char *copy = malloc(sizeof(char) * (n + 1));
+	memcpy(copy, text, sizeof(char) * n);
+	copy[n] = '\0';
+	return copy;
+}
+
+void StringToFile(FILE *f, const char *text) {
+	int n = strlen(text);
+	fwrite(&n, sizeof(n), 1, f);
+	fwrite(text, sizeof(*text), n, f);
+}
+
+char *StringFromFile(FILE *f) {
+	int n;
+	fread(&n, sizeof(n), 1, f);
+	char *copy = malloc(sizeof(char) * (n+1));
+	fread(copy, sizeof(*copy), n, f);
+	copy[n] = '\0';
+	return copy;
+}
+
+String InsertString(Strings strings, char *text) {
+	char *copy = CopyString(strlen(text), text);
+	LFK_ForeignKey key = LFK_AddRow(strings.table);
+	((char**)strings.table->data[0])[key.llup] = copy;
+	return (String){key};
+}
+
+void WriteStrings(Strings strings, FILE *f) {
+	// Make sure data is packed.
+	LFK_Defragment(strings.table);
+	// Save number of rows.
+	int rows = strings.table->len;
+	fwrite(&rows, sizeof(rows), 1, f);
+
+	int i;
+	for (i = 0; i < strings.table->len; i++) {
+		char *text = ((char**)strings.table->data[0])[i];
+		StringToFile(f, text);
+	}
+}
+
+Strings ReadStrings(FILE *f) {
+	int rows;
+	fread(&rows, sizeof(rows), 1, f);
+	Strings strings = NewStringsTable(rows);
+	int i;
+	for (i = 0; i < rows; i++) {
+		char *text = StringFromFile(f);
+		((char**)strings.table->data[0])[i] = text;
+	}
+	
+	return strings;
+}
+
+void TestCustomReadWrite(void) {
+	Strings strings = NewStringsTable(3);
+	String carl = InsertString(strings, "Carl");
+	String john = InsertString(strings, "John");
+	String peter = InsertString(strings, "Peter");
+	const char* c = GetString(strings, carl);
+	const char* j = GetString(strings, john);
+	const char* p = GetString(strings, peter);
+	assert(strcmp(c, "Carl") == 0);
+	assert(strcmp(j, "John") == 0);
+	assert(strcmp(p, "Peter") == 0);
+	// Save data.
+	FILE *f = fopen("test-strings.bin", "w");
+	WriteStrings(strings, f);
+	fclose(f);
+	// Release memory.
+	LFK_FreeTable(strings.table);
+	f = fopen("test-strings.bin", "r");
+	strings = ReadStrings(f);
+	fclose(f);
+	c = GetString(strings, carl);
+	j = GetString(strings, john);
+	p = GetString(strings, peter);
+	
+	assert(strcmp(c, "Carl") == 0);
+	assert(strcmp(j, "John") == 0);
+	assert(strcmp(p, "Peter") == 0);
+	
+	LFK_FreeTable(strings.table);
+}
+
 int main(int argc, char *argv[]) {
 	int i;
-	for (i = 0; i < 1; i++) {
-		TestDefragmentation();
-	}
-	for (i = 0; i < 1; i++) {
-		TestReadWrite();
-	}
+	for (i = 0; i < 1; i++) TestDefragmentation();
+	for (i = 0; i < 1; i++) TestReadWrite();
+	for (i = 0; i < 1; i++) TestCustomReadWrite();
 	
 	return 0;
 }

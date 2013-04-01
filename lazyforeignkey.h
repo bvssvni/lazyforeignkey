@@ -43,6 +43,19 @@
  cap	= capacity
  id		= identifier
  
+ RECOMMENDATIONS
+ 
+ In order to avoid accidental assignments,
+ use structs wrapped around each kind of table:
+ 
+ typedef struct {
+	LFK_Table *table;
+ } MyTable;
+ 
+ typedef struct {
+	LFK_ForeignKey key;
+ } MyKey;
+ 
  */
 
 typedef struct LFK_ForeignKey {
@@ -62,15 +75,40 @@ typedef struct LFK_Table {
 	LFK_ForeignKey **foreignkey_values;	// foreign key data.
 } LFK_Table;
 
-LFK_Table *LFK_NewTable(int capacity);
-LFK_ForeignKey LFK_AddRow(LFK_Table *table);
-void LFK_LookUp(LFK_Table const *table, LFK_ForeignKey *key);
-int LFK_AddColumn(LFK_Table *table, int item_size);
-int LFK_AddForeignKey(LFK_Table *table);
-void LFK_Defragment(LFK_Table *table);
-void LFK_Write(const LFK_Table *table, FILE *f);
-LFK_Table *LFK_Read(FILE *f);
-void LFK_FreeTable(LFK_Table *table);
+LFK_Table *LFK_NewTable	// Returns a pointer to a new table.
+						// Must be released with 'LFK_FreeTable'.
+(int capacity);
+
+LFK_ForeignKey LFK_AddRow	// Adds a new row to end of table.
+							// Rows can not be inserted in the middle.
+							// This method is not thread safe.
+(LFK_Table *table);
+
+void LFK_LookUp				// Updates a foreign key with the new llup.
+							// This method is not thread safe.
+(LFK_Table const *table,
+ LFK_ForeignKey *key);
+
+int LFK_AddColumn			// Adds a new column to table.
+							// This method is not thread safe.
+(LFK_Table *table,
+ int column_size);			// The size of each item per row in bytes.
+
+int LFK_AddForeignKey
+(LFK_Table *table);
+
+void LFK_Defragment
+(LFK_Table *table);
+
+void LFK_Write
+(const LFK_Table *table,
+ FILE *f);
+
+LFK_Table *LFK_Read
+(FILE *f);
+
+void LFK_FreeTable
+(LFK_Table *table);
 
 #endif
 
