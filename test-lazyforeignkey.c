@@ -1,7 +1,7 @@
 #if 0
 #!/bin/bash
 clear
-gcc -o bin/test-lazyforeignkey test-lazyforeignkey.c lazyforeignkey.c -O3 -Wall -Wfatal-errors
+gcc -o bin/test-lazyforeignkey -g test-lazyforeignkey.c lazyforeignkey.c -O3 -Wall -Wfatal-errors
 if [ "$?" = "0" ]; then
 	time ./bin/test-lazyforeignkey
 fi
@@ -13,6 +13,24 @@ exit
 #include <string.h>
 #include <assert.h>
 #include "lazyforeignkey.h"
+
+//////////////// Prints lot of text if memory leak //////////////
+// http://isprogrammingeasy.blogspot.no/2013/04/detecting-memory-leaks-in-c.html
+#define free(ptr) \
+do { \
+static long min = -1; \
+static long max = -1; \
+long ptr_val = (long)ptr; \
+long diff = max - min; \
+min = min == -1 || ptr_val < min ? ptr_val : min; \
+max = max == -1 || ptr_val > max ? ptr_val : max; \
+if (max - min > diff) { \
+	printf("%ld %s FILE %s LINE %i\n", (max - min), #ptr, __FILE__, __LINE__); \
+} \
+\
+free(ptr); \
+} while (0);
+/////////////////////////////////////////////////////////////////
 
 typedef struct {
 	LFK_Table *table;
@@ -140,6 +158,19 @@ Strings NewStringsTable(int capacity) {
 	return (Strings){table};
 }
 
+void FreeStringsTable(Strings *strings) {
+	if (strings->table == NULL) return;
+	
+	int i;
+	for (i = 0; i < strings->table->len; i++) {
+		char *text = ((char**)strings->table->data[0])[i];
+		free(text);
+	}
+	
+	LFK_FreeTable(strings->table);
+	strings->table = NULL;
+}
+
 const char *GetString(Strings strings, String string) {
 	LFK_LookUp(strings.table, &string.key);
 	const char *text = ((char**)strings.table->data[0])[string.key.llup];
@@ -196,7 +227,8 @@ Strings ReadStrings(FILE *f) {
 	int i;
 	for (i = 0; i < rows; i++) {
 		char *text = StringFromFile(f);
-		((char**)strings.table->data[0])[i] = text;
+		InsertString(strings, text);
+		free(text);
 	}
 	
 	return strings;
@@ -204,41 +236,107 @@ Strings ReadStrings(FILE *f) {
 
 void TestCustomReadWrite(void) {
 	Strings strings = NewStringsTable(3);
+	
+	// TEST
+	// printf("strings %ld\n", (long)strings.table);
+	
 	String carl = InsertString(strings, "Carl");
 	String john = InsertString(strings, "John");
 	String peter = InsertString(strings, "Peter");
+	
 	const char* c = GetString(strings, carl);
 	const char* j = GetString(strings, john);
 	const char* p = GetString(strings, peter);
+	
+	// TEST
+	// check_pointer(c, "carl");
+	
+	// TEST
+	// check_pointer("john", (void*)j);
+	
+	// TEST
+	// check_pointer("peter", (void*)p);
+	
 	assert(strcmp(c, "Carl") == 0);
 	assert(strcmp(j, "John") == 0);
 	assert(strcmp(p, "Peter") == 0);
+	
 	// Save data.
 	const char* file = "testfiles/test-strings.bin";
 	FILE *f = fopen(file, "w");
 	WriteStrings(strings, f);
 	fclose(f);
 	// Release memory.
-	LFK_FreeTable(strings.table);
+	FreeStringsTable(&strings);
+	
 	f = fopen(file, "r");
 	strings = ReadStrings(f);
 	fclose(f);
+	
+	// TEST
+	// check_pointer(strings.table, "table 2");
+	
+	// TEST
+	// check_pointer(strings.table->data, "data 2");
+	
+	// TEST
+	// check_pointer(strings.table->column_size, "column size 2");
+	
+	// TEST
+	// check_pointer(strings.table->ids, "ids 2");
+	
+	assert(strings.table->len == 3);
+	assert(strings.table->cap == 3);
+	assert(strings.table->column_len == 1);
+	
 	c = GetString(strings, carl);
 	j = GetString(strings, john);
 	p = GetString(strings, peter);
+	
+	// TEST
+	// check_pointer(c, "carl 2");
+	
+	// TEST
+	// check_pointer(j, "john 2");
+	
+	// TEST
+	// check_pointer(p, "peter 2");
 	
 	assert(strcmp(c, "Carl") == 0);
 	assert(strcmp(j, "John") == 0);
 	assert(strcmp(p, "Peter") == 0);
 	
-	LFK_FreeTable(strings.table);
+	// TEST
+	// system("clear");
+	
+	FreeStringsTable(&strings);
+	assert(strings.table == NULL);
+}
+
+void TestExpandTable(void) {
+	LFK_Table *table = LFK_NewTable(0);
+	assert(table->len == 0);
+	assert(table->cap == 0);
+	LFK_AddRow(table);
+	assert(table->len == 1);
+	assert(table->cap == 1);
+	LFK_AddRow(table);
+	assert(table->len == 2);
+	assert(table->cap == 2);
+	LFK_AddRow(table);
+	assert(table->len == 3);
+	assert(table->cap == 4);
+	LFK_FreeTable(table);
 }
 
 int main(int argc, char *argv[]) {
 	int i;
+	/*
 	for (i = 0; i < 1; i++) TestDefragmentation();
 	for (i = 0; i < 1; i++) TestReadWrite();
-	for (i = 0; i < 1; i++) TestCustomReadWrite();
+	for (i = 0; i < 1; i++) TestExpandTable();
+	 */
+	for (i = 0; i < 10000; i++) TestCustomReadWrite();
 	
 	return 0;
 }

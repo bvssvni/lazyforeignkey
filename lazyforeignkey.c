@@ -5,6 +5,22 @@
 #include "lazyforeignkey.h"
 
 LFK_ForeignKey LFK_AddRow(LFK_Table *table) {
+	if (table->len == table->cap) {
+		int newCap = table->cap == 0 ? 1 : table->cap << 1;
+		int i;
+		table->ids = realloc
+		(table->ids, sizeof(*table->ids) * newCap);
+		for (i = 0; i < table->column_len; i++) {
+			table->data[i] = realloc
+			(table->data[i], table->column_size[i] * newCap);
+		}
+		for (i = 0; i < table->foreignkey_len; i++) {
+			table->foreignkey_values[i] = realloc
+			(table->foreignkey_values[i], sizeof(LFK_ForeignKey) * newCap);
+		}
+		table->cap = newCap;
+	}
+	
 	long id = table->id_counter;
 	int pos = table->len;
 	table->ids[pos] = id;
@@ -166,23 +182,27 @@ LFK_Table *LFK_Read(FILE *f) {
 	return table;
 }
 
+void free_pointer(void **ptr) {
+	if (*ptr == NULL) return;
+	
+	free(*ptr);
+	*ptr = NULL;
+}
+
 void LFK_FreeTable(LFK_Table *const table) {
 	int i;
 	for (i = 0; i < table->column_len; i++) {
-		if (table->data[i] != NULL) free(table->data[i]);
+		free_pointer(&table->data[i]);
 	}
 
 	for (i = 0; i < table->foreignkey_len; i++) {
-		if (table->foreignkey_values[i] != NULL) {
-			free(table->foreignkey_values[i]);
-		}
+		free_pointer((void**)&table->foreignkey_values[i]);
 	}
 
-	if (table->column_size != NULL) free(table->column_size);
-	if (table->data != NULL) free(table->data);
-	if (table->foreignkey_values != NULL) free(table->foreignkey_values);
-	if (table->ids != NULL) free(table->ids);
-	
-	free(table);
+	free_pointer((void**)&table->column_size);
+	free_pointer((void**)&table->data);
+	free_pointer((void**)&table->foreignkey_values);
+	free_pointer((void**)&table->ids);
+	free_pointer((void**)&table);
 }
 
