@@ -62,11 +62,22 @@ typedef struct LFK_Table {
 	LFK_ForeignKey **foreignkey_values;	// foreign key data.
 } LFK_Table;
 
+// Declare column struct to avoid accidental assignment.
+typedef struct LFK_column {
+	int id;
+} LFK_column;
+
+// Declare key struct to avoid accidental assignment.
+typedef struct LFK_key {
+	int id;
+} LFK_key;
+
 void LFK_LookUp(LFK_Table const *table, LFK_ForeignKey *key);
-int LFK_NewColumn(LFK_Table *table, int item_size);
-int LFK_NewForeignKey(LFK_Table *table);
+LFK_column LFK_AddColumn(LFK_Table *table, int item_size);
+LFK_key LFK_AddForeignKey(LFK_Table *table);
 LFK_Table *LFK_NewTable(int capacity);
 void LFK_Defragment(LFK_Table *table);
+void LFK_Write(const LFK_Table *table, FILE *f);
 void LFK_FreeTable(LFK_Table *table);
 
 #endif

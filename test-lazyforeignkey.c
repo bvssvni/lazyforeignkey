@@ -34,7 +34,7 @@ LFK_ForeignKey LFK_CreateForeignKey(long id) {
 
 void TestDefragmentation(void) {
 	LFK_Table *people = LFK_NewTable(100);
-	LFK_NewColumn(people, sizeof(int));
+	LFK_AddColumn(people, sizeof(int));
 	
 	int i;
 	int cl = 1 << 0;
@@ -75,10 +75,20 @@ void TestDefragmentation(void) {
 	LFK_FreeTable(people);
 }
 
+void TestReadWrite(void) {
+	LFK_Table *const t = LFK_NewTable(4);
+	FILE *f = fopen("test.bin", "w");
+	LFK_Write(t, f);
+	fclose(f);
+}
+
 int main(int argc, char *argv[]) {
 	int i;
 	for (i = 0; i < 1; i++) {
 		TestDefragmentation();
+	}
+	for (i = 0; i < 1; i++) {
+		TestReadWrite();
 	}
 	
 	return 0;
