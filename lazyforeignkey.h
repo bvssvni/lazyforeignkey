@@ -56,43 +56,55 @@
 	LFK_ForeignKey key;
  } MyKey;
  
- */
+*/
 
 typedef struct LFK_ForeignKey {
-	long id;	// -1 when deleted.
-	int llup;	// -1 before looking up first time.
+	int64_t id;	// -1 when deleted, 0 corresponds to NULL.
+	int32_t llup;	// -1 before looking up first time.
 } LFK_ForeignKey;
 
 typedef struct LFK_Table {
-	int len;	// number of rows in table.
-	int cap;	// row capacity.
-	long id_counter;	// the next id.
-	long *ids;			// the ids per row.
-	int column_len;		// number of columns.
-	int *column_size;	// size of each column in bytes.
+	int32_t len;	// number of rows in table.
+	int32_t cap;	// row capacity.
+	int64_t id_counter;	// the next id.
+	int64_t *ids;		// the ids per row.
+	int32_t column_len;	// number of columns.
+	int32_t *column_size;	// size of each column in bytes.
 	void **data;		// a pointer for each allocated column.
-	int foreignkey_len;					// number of foreign keys.
+	int32_t foreignkey_len;	// number of foreign keys.
 	LFK_ForeignKey **foreignkey_values;	// foreign key data.
 } LFK_Table;
 
-LFK_Table *LFK_NewTable	// Returns a pointer to a new table.
-						// Must be released with 'LFK_FreeTable'.
-(int capacity);
+/*
+Returns a pointer to a new table.
+Must be released with 'LFK_FreeTable'.
+*/
+LFK_Table *LFK_NewTable
+(int32_t capacity);
 
-LFK_ForeignKey LFK_AddRow	// Adds a new row to end of table.
-							// Rows can not be inserted in the middle.
-							// This method is not thread safe.
+/*
+Adds a new row to end of table.
+Rows can not be inserted in the middle.
+This method is not thread safe.
+*/
+LFK_ForeignKey LFK_AddRow
 (LFK_Table *table);
 
-void LFK_LookUp				// Updates a foreign key with the new llup.
-							// This method is not thread safe.
+/*
+Updates a foreign key with the new llup.
+This method is not thread safe.
+*/
+void LFK_LookUp
 (LFK_Table const *table,
  LFK_ForeignKey *key);
 
-int LFK_AddColumn			// Adds a new column to table.
-							// This method is not thread safe.
+/*
+Addsa new column to table.
+This method is not thread safe.
+*/
+int LFK_AddColumn
 (LFK_Table *table,
- int column_size);			// The size of each item per row in bytes.
+ int column_size); // The size of each item per row in bytes.
 
 int LFK_AddForeignKey
 (LFK_Table *table);
