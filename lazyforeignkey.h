@@ -63,6 +63,12 @@ typedef struct LFK_ForeignKey {
 	int32_t llup;	// -1 before looking up first time.
 } LFK_ForeignKey;
 
+typedef struct LFK_List {
+	int32_t len;
+	int32_t cap;
+	LFK_ForeignKey *items;
+} LFK_List;
+
 typedef struct LFK_Table {
 	int32_t len;	// number of rows in table.
 	int32_t cap;	// row capacity.
@@ -74,6 +80,27 @@ typedef struct LFK_Table {
 	int32_t foreignkey_len;	// number of foreign keys.
 	LFK_ForeignKey **foreignkey_values;	// foreign key data.
 } LFK_Table;
+
+/*
+Creates a new list.
+A list contains only foreign keys.
+These are used to look up the actual data.
+*/
+LFK_List LFK_NewList(int32_t capacity);
+
+/*
+Frees the memory allocated by list.
+*/
+void LFK_FreeList(LFK_List *list);
+
+/*
+Adds a new item to list.
+*/
+void LFK_AddToList(LFK_List *list, LFK_ForeignKey key);
+
+void LFK_InsertInList(LFK_List *list, int32_t index, LFK_ForeignKey key);
+
+void LFK_RemoveFromListByIndex(LFK_List *list, int32_t index);
 
 /*
 Returns a pointer to a new table.

@@ -4,6 +4,58 @@
 #include <string.h>
 #include "lazyforeignkey.h"
 
+LFK_List LFK_NewList(int32_t capacity) {
+	LFK_ForeignKey *items = malloc(sizeof(*items) * capacity);
+	return (LFK_List){.len = 0, .cap = capacity, .items = items};
+}
+
+void LFK_FreeList(LFK_List *list) {
+	if (list->items != NULL) {
+		free(list->items);
+		list->items = NULL;
+	}
+}
+
+void LFK_AddToList(LFK_List *list, LFK_ForeignKey key) {
+	if (list->items == NULL) return;
+	if (list->len == list->cap) {
+		int32_t newCap = list->cap == 0 ? 1 : list->cap << 1;
+		list->items = realloc(list->items, sizeof(*list->items) * newCap);
+		list->cap = newCap;
+	}
+
+	list->items[list->len] = key;
+	list->len++;
+}
+
+void LFK_InsertInList(LFK_List *list, int32_t index, LFK_ForeignKey key) {
+	if (list->items == NULL) return;
+	if (index < 0) return;
+	if (index > list->len) return;
+	if (list->len == list->cap) {
+		int32_t newCap = list->cap == 0 ? 1 : list->cap << 1;
+		list->items = realloc(list->items, sizeof(*list->items) * newCap);
+		list->cap = newCap;
+	}
+
+	int i;
+	for (i = index; i < list->len; i++) {
+		list->items[i + 1] = list->items[i];
+	}
+
+	list->items[index] = key;
+	list->len++;
+}
+
+void LFK_RemoveFromListByIndex(LFK_List *list, int32_t index) {
+	int i;
+	for (i = index; i < list->len - 1; i++) {
+		list->items[i] = list->items[i + 1];
+	}
+
+	list->len--;
+}
+
 LFK_ForeignKey LFK_AddRow(LFK_Table *table) {
 	if (table->len == table->cap) {
 		int32_t newCap = table->cap == 0 ? 1 : table->cap << 1;

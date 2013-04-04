@@ -259,9 +259,6 @@ ERROR:
 void TestCustomReadWrite(void) {
 	Strings strings = NewStringsTable(3);
 	
-	// TEST
-	// printf("strings %ld\n", (long)strings.table);
-	
 	String carl = InsertString(strings, "Carl");
 	String john = InsertString(strings, "John");
 	String peter = InsertString(strings, "Peter");
@@ -269,15 +266,6 @@ void TestCustomReadWrite(void) {
 	const char* c = GetString(strings, carl);
 	const char* j = GetString(strings, john);
 	const char* p = GetString(strings, peter);
-	
-	// TEST
-	// check_pointer(c, "carl");
-	
-	// TEST
-	// check_pointer("john", (void*)j);
-	
-	// TEST
-	// check_pointer("peter", (void*)p);
 	
 	assert(strcmp(c, "Carl") == 0);
 	assert(strcmp(j, "John") == 0);
@@ -295,18 +283,6 @@ void TestCustomReadWrite(void) {
 	strings = ReadStrings(f);
 	fclose(f);
 	
-	// TEST
-	// check_pointer(strings.table, "table 2");
-	
-	// TEST
-	// check_pointer(strings.table->data, "data 2");
-	
-	// TEST
-	// check_pointer(strings.table->column_size, "column size 2");
-	
-	// TEST
-	// check_pointer(strings.table->ids, "ids 2");
-	
 	assert(strings.table->len == 3);
 	assert(strings.table->cap == 3);
 	assert(strings.table->column_len == 1);
@@ -315,21 +291,9 @@ void TestCustomReadWrite(void) {
 	j = GetString(strings, john);
 	p = GetString(strings, peter);
 	
-	// TEST
-	// check_pointer(c, "carl 2");
-	
-	// TEST
-	// check_pointer(j, "john 2");
-	
-	// TEST
-	// check_pointer(p, "peter 2");
-	
 	assert(strcmp(c, "Carl") == 0);
 	assert(strcmp(j, "John") == 0);
 	assert(strcmp(p, "Peter") == 0);
-	
-	// TEST
-	// system("clear");
 	
 	FreeStringsTable(&strings);
 	assert(strings.table == NULL);
@@ -351,14 +315,43 @@ void TestExpandTable(void) {
 	LFK_FreeTable(table);
 }
 
+void TestListAdd(void) {
+	LFK_List list = LFK_NewList(3);
+	LFK_ForeignKey a = {.id = 1, .llup = 0};
+	LFK_ForeignKey b = {.id = 2, .llup = 1};
+	LFK_ForeignKey c = {.id = 3, .llup = 2};
+	LFK_AddToList(&list, a);
+	LFK_AddToList(&list, b);
+	LFK_AddToList(&list, c);
+	assert(list.len == 3);
+	LFK_FreeList(&list);
+}
+
+void TestListInsertAndRemove(void) {
+	LFK_List list = LFK_NewList(3);
+	LFK_ForeignKey a = {.id = 1, .llup = 0};
+	LFK_ForeignKey b = {.id = 2, .llup = 1};
+	LFK_ForeignKey c = {.id = 3, .llup = 2};
+	LFK_InsertInList(&list, 0, a);
+	LFK_InsertInList(&list, 0, b);
+	LFK_InsertInList(&list, 0, c);
+	assert(list.len == 3);
+	LFK_RemoveFromListByIndex(&list, 0);
+	LFK_RemoveFromListByIndex(&list, 0);
+	LFK_RemoveFromListByIndex(&list, 0);
+	assert(list.len == 0);	
+	LFK_FreeList(&list);
+}
+
 int main(int argc, char *argv[]) {
 	int i;
-	/*
+
 	for (i = 0; i < 1; i++) TestDefragmentation();
 	for (i = 0; i < 1; i++) TestReadWrite();
 	for (i = 0; i < 1; i++) TestExpandTable();
-	 */
-	for (i = 0; i < 10000; i++) TestCustomReadWrite();
+	for (i = 0; i < 1; i++) TestCustomReadWrite();
+	for (i = 0; i < 1; i++) TestListAdd();
+	for (i = 0; i < 1; i++) TestListInsertAndRemove();
 	
 	return 0;
 }
