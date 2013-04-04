@@ -191,12 +191,23 @@ void StringToFile(FILE *f, const char *text) {
 }
 
 char *StringFromFile(FILE *f) {
+	char *copy = NULL;
+
 	int n;
-	fread(&n, sizeof(n), 1, f);
-	char *copy = malloc(sizeof(char) * (n+1));
-	fread(copy, sizeof(*copy), n, f);
+	int bytesRead = fread(&n, sizeof(n), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
+	copy = malloc(sizeof(char) * (n+1));
+	bytesRead = fread(copy, sizeof(*copy), n, f);
+	if (bytesRead == 0) goto ERROR;
+
 	copy[n] = '\0';
 	return copy;
+
+ERROR:
+	if (copy != NULL) free(copy);
+
+	return NULL;
 }
 
 String InsertString(Strings strings, char *text) {
@@ -221,17 +232,28 @@ void WriteStrings(Strings strings, FILE *f) {
 }
 
 Strings ReadStrings(FILE *f) {
+	Strings strings = {};
+
 	int rows;
-	fread(&rows, sizeof(rows), 1, f);
-	Strings strings = NewStringsTable(rows);
+	size_t bytes = fread(&rows, sizeof(rows), 1, f);
+	if (bytes == 0) goto ERROR;
+
+	strings = NewStringsTable(rows);
 	int i;
 	for (i = 0; i < rows; i++) {
 		char *text = StringFromFile(f);
+		if (text == NULL) goto ERROR;
+
 		InsertString(strings, text);
 		free(text);
 	}
 	
 	return strings;
+
+ERROR:
+	if (strings.table != NULL) LFK_FreeTable(strings.table);
+
+	return (Strings){};
 }
 
 void TestCustomReadWrite(void) {

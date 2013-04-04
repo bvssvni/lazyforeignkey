@@ -136,22 +136,36 @@ void LFK_Write(const LFK_Table *table, FILE *f) {
 }
 
 LFK_Table *LFK_Read(FILE *f) {
+	LFK_Table *table = NULL;
+
 	int len, cap;
-	fread(&len, sizeof(len), 1, f);
-	fread(&cap, sizeof(cap), 1, f);
-	LFK_Table *table = LFK_NewTable(cap);
+	size_t bytesRead = fread(&len, sizeof(len), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
+	bytesRead = fread(&cap, sizeof(cap), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
+	table = LFK_NewTable(cap);
 	table->len = len;
-	fread(&table->id_counter, sizeof(table->id_counter), 1, f);
-	fread(table->ids, sizeof(*table->ids), table->len, f);
-	fread(&table->column_len, sizeof(table->column_len), 1, f);
+	bytesRead = fread(&table->id_counter, sizeof(table->id_counter), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
+	bytesRead = fread(table->ids, sizeof(*table->ids), table->len, f);
+	if (bytesRead == 0) goto ERROR;
+
+	bytesRead = fread(&table->column_len, sizeof(table->column_len), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
 	// Allocate array that tells size of columns.
 	if (table->column_len > 0) {
 		table->column_size = malloc
 		(sizeof(*table->column_size) * table->column_len);
 	}
 		
-	fread(table->column_size,
+	bytesRead = fread(table->column_size,
 		  sizeof(*table->column_size), table->column_len, f);
+	if (bytesRead == 0) goto ERROR;
+
 	// Allocate array that contains data.
 	if (table->cap > 0) {
 		table->data = malloc(sizeof(*table->data) * table->cap);
@@ -164,10 +178,13 @@ LFK_Table *LFK_Read(FILE *f) {
 			table->data[i] = malloc(table->column_size[i] * table->cap);
 		}
 		
-		fread(table->data[i], table->column_size[i], table->len, f);
+		bytesRead = fread(table->data[i], table->column_size[i], table->len, f);
+		if (bytesRead == 0) goto ERROR;	
 	}
 	
-	fread(&table->foreignkey_len, sizeof(table->foreignkey_len), 1, f);
+	bytesRead = fread(&table->foreignkey_len, sizeof(table->foreignkey_len), 1, f);
+	if (bytesRead == 0) goto ERROR;
+
 	// Allocate array that contains foreign keys.
 	if (table->foreignkey_len > 0) {
 		table->foreignkey_values = malloc
@@ -175,11 +192,17 @@ LFK_Table *LFK_Read(FILE *f) {
 	}
 		
 	for (i = 0; i < table->foreignkey_len; i++) {
-		fread(table->foreignkey_values[i],
+		bytesRead = fread(table->foreignkey_values[i],
 			  sizeof(LFK_ForeignKey), table->len, f);
+		if (bytesRead == 0) goto ERROR;
 	}
 	
 	return table;
+
+ERROR:
+	if (table != NULL) LFK_FreeTable(table);
+
+	return NULL;
 }
 
 void free_pointer(void **ptr) {
