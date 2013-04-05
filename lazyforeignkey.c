@@ -78,6 +78,20 @@ LFK_ForeignKey LFK_AddRow(LFK_Table *table) {
 	table->ids[pos] = id;
 	table->id_counter++;
 	table->len++;
+
+	// Blank out the memory for the row.
+	do {
+		int32_t i;
+		for (i = 0; i < table->column_len; i++) {
+			int32_t size = table->column_size[i];
+			memset(((unsigned char*)table->data[i]) + size * pos, 0, size);
+		}
+		for (i = 0; i < table->foreignkey_len; i++) {
+			((LFK_ForeignKey*)table->foreignkey_values[i])[pos] = 
+			(LFK_ForeignKey){};
+		}
+	} while (0);
+
 	return (LFK_ForeignKey){.id = id, .llup = pos};
 }
 
